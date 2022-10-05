@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ethers, BigNumber } from "ethers";
+import { ethers } from "ethers";
 import "./App.css";
 import { Button, Card } from "react-bootstrap";
 import { Seaport } from "@opensea/seaport-js";
@@ -55,17 +55,17 @@ function App() {
           // zoneHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
           endTime:1664428149,
           offer: [{ 
+            token: "0x0000000000000000000000000000000000000000",
+            amount: ethers.utils.parseEther("0.01").toString(),
+            endAmount: ethers.utils.parseEther("0.01").toString(),
+            identifier: "0"
+          }],
+          consideration: [{ 
             itemType: ItemType.ERC721,
             token: "0x51Bae864d00D543F2A40f2B6A623ABBea46AeA7e", 
             identifier: "1",
             amount: "1",
-            endAmount: "1"
-          }],
-          consideration: [{ 
-            token: "0x0000000000000000000000000000000000000000",
-            amount: ethers.utils.parseEther("0.01").toString(),
-            endAmount: ethers.utils.parseEther("0.01").toString(),
-            identifier: "0",
+            endAmount: "1",
             recipient: data.address
           }],
           // allowPartialFills: false, 
