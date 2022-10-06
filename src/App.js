@@ -2,24 +2,19 @@ import React, { useState } from "react";
 import { ethers, BigNumber } from "ethers";
 import "./App.css";
 import { Button, Card } from "react-bootstrap";
-import { Seaport } from "@opensea/seaport-js";
+// import { Seaport } from "@opensea/seaport-js";
 import { ItemType } from '@opensea/seaport-js/lib/constants';
-  
+import { seaport, createOrder721ToEther, createOrder721To20, fulfillOrder, cancelOrder } from "./api";
+import axios from 'axios';
+
 function App() {
   const [data, setdata] = useState({
     address: "",
-    Balance: null,
-    provider: null,
-    seaport: null
+    Balance: null
   });
   const [currentOrder, setorder] = useState(null);
 
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-  // console.log(provider);
-  const seaport = new Seaport(provider);
-  // console.log(seaport);
-
-  const btnhandler = () => {
+  const btnhandler = async () => {
     if (window.ethereum) {
       window.ethereum
         .request({ method: "eth_requestAccounts" })
@@ -27,7 +22,6 @@ function App() {
     } else {
       alert("install metamask extension!!");
     }
-    // console.log(provider)
   };
 
   const getbalance = (address) => {
@@ -39,46 +33,38 @@ function App() {
       .then((balance) => {
         setdata({
           address: address,
-          Balance: ethers.utils.formatEther(balance),
-          provider: new ethers.providers.Web3Provider(window.ethereum),
-          seaport: new Seaport(provider)
+          Balance: ethers.utils.formatEther(balance)
         });
       });
   };
 
   const orderhandler = async () => {
-    if (seaport != null) {
-      const orderCreate = await seaport.createOrder(
-        {
-          // conduitKey: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
-          // zone: "0x00000000E88FE2628EbC5DA81d2b3CeaD633E89e",
-          // zoneHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          endTime:1664428149,
-          offer: [{ 
-            itemType: ItemType.ERC721,
-            token: "0x51Bae864d00D543F2A40f2B6A623ABBea46AeA7e", 
-            identifier: "1",
-            amount: "1",
-            endAmount: "1"
-          }],
-          consideration: [{ 
-            token: "0x0000000000000000000000000000000000000000",
-            amount: ethers.utils.parseEther("0.01").toString(),
-            endAmount: ethers.utils.parseEther("0.01").toString(),
-            identifier: "0",
-            recipient: data.address
-          }],
-          // allowPartialFills: false, 
-          // restrictedByZone: true, 
-          // fees:[{recipient: "0x0000a26b00c1F0DF003000390027140000fAa719", basisPoints: 250}],
-        },
-        data.address
+    console.log(seaport)
+    if (seaport !== null || data.address !== "") {
+      const endTime = "1675033103";
+      const offerItemAddr = "0x9AF2DBa1ca0e8C91ac1cb9B786e63F25a51DC2A0"; 
+      const offerItemId = "1"; 
+      const considerationAmount = ethers.utils.parseEther("0.01").toString();
+      const recipient = data.address;
+      const order = await createOrder721ToEther(
+        endTime, 
+        undefined, 
+        offerItemAddr, 
+        offerItemId, 
+        undefined, 
+        undefined, 
+        undefined, 
+        undefined, 
+        considerationAmount,
+        recipient
       );
-
-      const order = await orderCreate.executeAllActions();
-      console.log("create order : ", order);
-      setorder(order);                          // 이 부분에서 DB에 order data 저장 필요
-      console.log(currentOrder);
+      console.log(order)
+      const response = await axios.post(
+        'https://angry-donuts-fall-112-169-66-206.loca.lt/api/seaport/order/create',
+        order
+      )
+      // setorder(order);                          // 이 부분에서 DB에 order data 저장 필요
+      console.log(response);
     } 
     else {
       alert("install metamask extension!!");
@@ -87,31 +73,54 @@ function App() {
 
   const fulfillhandler = async () => {
     // current Order가 아니라 DB에서 가져와야한다
-    if (seaport != null & currentOrder != null) {
+    const order = await axios.get(
+      `https://angry-donuts-fall-112-169-66-206.loca.lt/api/seaport/ae735313-4acd-4d53-b46d-dc29679a865c`
+    )
+    console.log(JSON.parse(order.data.order))
+    if (seaport != null & order != null) {
       const { executeAllActions: executeAllFulfillActions } = await seaport.fulfillOrder({
-        order: currentOrder,
+        order: JSON.parse(order.data.order),
         accountAddress: data.address,
         // conduitKey: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000"
       });
 
       const transaction = await executeAllFulfillActions();
-      console.log("offer order : ", transaction);
 
-      setorder(null);
+      const response = await axios.patch(
+        'https://angry-donuts-fall-112-169-66-206.loca.lt/api/seaport',
+        {
+          orderId: "ae735313-4acd-4d53-b46d-dc29679a865c",
+          buyer: transaction.from
+        }
+      )
+      console.log(response)
     } else {
       alert("install metamask extension!!");
     }
   };
 
   const checkhandler = async () => {
-    console.log(currentOrder);
+    const response = await axios.get(
+      `https://angry-donuts-fall-112-169-66-206.loca.lt/api/seaport/order/0x191a0b6268C7aeaaE8C2e35Ff01199875ef49104`
+    )
+    console.log(response)
   };
 
   const cancelhandler = async () => {
     // current Order가 아니라 DB에서 가져와야한다
     if (seaport != null & currentOrder != null) {
-      const orderCancel = await seaport.cancelOrders([currentOrder.parameters]).transact();
-      console.log("cancel order : ", orderCancel);
+      const orderCancel = await cancelOrder(currentOrder);
+      console.log(orderCancel);
+      setorder(null);
+    } else {
+      alert("install metamask extension!!");
+    }
+  };
+  const bulkhandler = async () => {
+    // current Order가 아니라 DB에서 가져와야한다
+    if (seaport != null) {
+      const bulkCancel = await seaport.bulkCancelOrders(data.address).transact();
+      console.log(bulkCancel);
       setorder(null);
     } else {
       alert("install metamask extension!!");
@@ -147,6 +156,9 @@ function App() {
           </Button>
           <Button onClick={cancelhandler} variant="primary">
             cancel current order
+          </Button>
+          <Button onClick={bulkhandler} variant="primary">
+            bulk current order
           </Button>
         </Card.Body>
       </Card>
