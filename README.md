@@ -227,9 +227,10 @@ console.log("cancel order : ", orderCancel);
 ```
 
 ### createOrder 함수 
-(createOrderERC721ToEther, createOrderERC721ToERC20, createOrderERC20ToERC721)
-3가지 case 처리용 function 
+(createOrderERC721ToEther, createOrderERC721ToERC20, createOrderERC20ToERC721)  
+3가지 case 처리용 function 모듈화 예시  
 ```javascript
+// src/api/seaportMethod.js
 const createOrder = async (
     _endTime,             // order 마감시간
     orderType,            // ERC721ToEther || ERC721ToERC20 || ERC20ToERC721
