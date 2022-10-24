@@ -144,7 +144,7 @@ const fulfillOrder = async (order)=> {
         });
     
         const transaction = await executeAllFulfillActions();
-
+        
         return transaction;
     } catch (error) {
         console.log(error)
