@@ -1,119 +1,287 @@
-# Getting Started Seaport test with Create React App
+# Practice for Seaport-js
+## .env
 ```
-npm install
-npm run start
+ALCHEMY_KEY = "ISVNLYW6KZAkPqMj2U-UPNGswrjD2CoB"    // your alchemy key
+GOERLI_KEY = "n2cukugoY49cwzU6y6tvgrIxgTz36xb2"     // your alchemy key
+ACCOUNT_PRIVATE_KEY1 = "your metamask address privatekey1"
+ACCOUNT_PRIVATE_KEY2 = "your metamask address privatekey2"
 ```
 
-## 설명
-현재 이 react의 test code는 내가 보유한 nft를 판매하는 경우를 가정하고 제작되어 있습니다.
-임시 코드이므로 App.js 파일에서 order 정보를 수정하여 사용하면 됩니다.
-offer에 판매할 nft의 정보, consideration에 대가로 받을 erc20 token이나 ether의 정보, endTime에 이 order의 마감 시간을 timeStamp 값으로 주면 됩니다.
+## Before start 
 ```
+npm install
+```
+Before start make your nft using remix or hardhat.
+After making nft, plz fix item contract address, types, ids in the code.
+(sample.js just test functions you don't need to touch)
+
+## create order arguments
+item type 
+    0 : ether (생략 가능하다) -> 이더의 경우 address, tokenid(identifier) 생략가능하다
+    1 : erc20
+    2 : erc721
+    3 : erc1155
+### 일반 order
+``` javascript
 const orderCreate = await seaport.createOrder(
     {
-        // conduitKey: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
-        // zone: "0x00000000E88FE2628EbC5DA81d2b3CeaD633E89e",
-        // zoneHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
         endTime:1664428149,
-        offer: [{ 
-            itemType: ItemType.ERC721,
+        offer: [{ // 제공 item
+            itemType: ItemType.ERC721, // 2
             token: "0x51Bae864d00D543F2A40f2B6A623ABBea46AeA7e", 
-            identifier: "1",
+            identifier: "0",
             amount: "1",
             endAmount: "1"
         }],
-        consideration: [{ 
+        consideration: [{
+            token: "0x0000000000000000000000000000000000000000",
+            amount: ethers.utils.parseEther("0.01").toString(),  
+            endAmount: ethers.utils.parseEther("0.01").toString(),
+            identifier: "0",
+            recipient: offerer
+        }],
+    },
+    offerer
+)
+const order = await orderCreate.executeAllActions(); // order를 db에 저장 해야된다
+console.log("create order : ", order);
+```
+```javascript
+const { executeAllActions: executeAllFulfillActions } = await seaport1.fulfillOrder({ 
+    order,
+    accountAddress: fulfiller,
+    conduitKey: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000"
+    // 수령인이 달라질 경우 recipientAddress argument 넣어줄 것
+});
+
+const transaction = await executeAllFulfillActions();
+console.log("offer order : ", transaction);
+```
+
+### 특정 구매자
+``` javascript
+const orderCreate = await seaport.createOrder(
+    {
+        endTime:1664428149,
+        offer: [{ // 제공 item
+            itemType: ItemType.ERC721, // 2
+            token: "0x51Bae864d00D543F2A40f2B6A623ABBea46AeA7e", 
+            identifier: "0",
+            amount: "1",
+            endAmount: "1"
+        }],
+        consideration: [{
             token: "0x0000000000000000000000000000000000000000",
             amount: ethers.utils.parseEther("0.01").toString(),
             endAmount: ethers.utils.parseEther("0.01").toString(),
             identifier: "0",
-            recipient: data.address
+            recipient: offerer
+        }, { 
+            itemType: ItemType.ERC721,
+            token: "0x51Bae864d00D543F2A40f2B6A623ABBea46AeA7e",
+            identifier: "0",
+            amount: "1",
+            endAmount: "1",
+            recipient: fulfiller // 구매 대상자를 위해 consideration 작성 필수
         }],
-        // allowPartialFills: false, 
-        // restrictedByZone: true, 
-        // fees:[{recipient: "0x0000a26b00c1F0DF003000390027140000fAa719", basisPoints: 250}],
     },
-    data.address
-);
+    offerer
+)
+```
+```javascript
+const orderCreate = await seaport.matchOrders({
+    orders: [order, counterOrder], 
+    fulfillments,
+    overrides: {
+        value: counterOrder.parameters.offer[0].startAmount,
+    },
+    accountAddress: fulfiller,
+}).transact();
+console.log("match order : ", transaction);
 ```
 
-### Create Order
-order 생성 기능 nft를 offer(제공), consideration(수령)하느냐에 따라서 buy order, sell order로 구분됩니다.
-이때, 필요한 경우 approve가 발동하며 그 후, order에 대한 metamask 서명이 발동합니다.
-```
-const orderhandler = async () => {
-    if (seaport != null) {
-        const orderCreate = await seaport.createOrder(
-            {
-            // conduitKey: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
-            // zone: "0x00000000E88FE2628EbC5DA81d2b3CeaD633E89e",
-            // zoneHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-            endTime:1664428149,
-            offer: [{ 
-                itemType: ItemType.ERC721,
-                token: "0x51Bae864d00D543F2A40f2B6A623ABBea46AeA7e", 
-                identifier: "1",
-                amount: "1",
-                endAmount: "1"
-            }],
-            consideration: [{ 
-                token: "0x0000000000000000000000000000000000000000",
-                amount: ethers.utils.parseEther("0.01").toString(),
-                endAmount: ethers.utils.parseEther("0.01").toString(),
-                identifier: "0",
-                recipient: data.address
-            }],
-            // allowPartialFills: false, 
-            // restrictedByZone: true, 
-            // fees:[{recipient: "0x0000a26b00c1F0DF003000390027140000fAa719", basisPoints: 250}],
-            },
-            data.address
-        );
-
-        const order = await orderCreate.executeAllActions();
-        console.log("create order : ", order);
-        setorder(order);                          // 이 부분에서 DB에 order data 저장 필요
-        console.log(currentOrder);
-    } 
-    else {
-        alert("install metamask extension!!");
+#### matchOrder 필요 기타 함수
+```javascript
+const constructPrivateListingCounterOrder = (
+    order,
+    privateSaleRecipient
+  ) => {
+    // Counter order offers up all the items in the private listing consideration
+    // besides the items that are going to the private listing recipient
+    const paymentItems = order.parameters.consideration.filter(
+      (item) =>
+        item.recipient.toLowerCase() !== privateSaleRecipient.toLowerCase()
+    );
+  
+    if (!paymentItems.every((item) => isCurrencyItem(item))) {
+      throw new Error(
+        "The consideration for the private listing did not contain only currency items"
+      );
     }
+    if (
+      !paymentItems.every((item) => item.itemType === paymentItems[0].itemType)
+    ) {
+      throw new Error("Not all currency items were the same for private order");
+    }
+  
+    const { aggregatedStartAmount, aggregatedEndAmount } = paymentItems.reduce(
+      ({ aggregatedStartAmount, aggregatedEndAmount }, item) => ({
+        aggregatedStartAmount: aggregatedStartAmount.add(item.startAmount),
+        aggregatedEndAmount: aggregatedEndAmount.add(item.endAmount),
+      }),
+      {
+        aggregatedStartAmount: BigNumber.from(0),
+        aggregatedEndAmount: BigNumber.from(0),
+      }
+    );
+  
+    const counterOrder = {
+      parameters: {
+        ...order.parameters,
+        offerer: privateSaleRecipient,
+        offer: [
+          {
+            itemType: paymentItems[0].itemType,
+            token: paymentItems[0].token,
+            identifierOrCriteria: paymentItems[0].identifierOrCriteria,
+            startAmount: aggregatedStartAmount.toString(),
+            endAmount: aggregatedEndAmount.toString(),
+          },
+        ],
+        // The consideration here is empty as the original private listing order supplies
+        // the taker address to receive the desired items.
+        consideration: [],
+        salt: generateRandomSalt(),
+        totalOriginalConsiderationItems: 0,
+      },
+      signature: "0x",
+    };
+  
+    return counterOrder;
 };
-```
 
-### fulfill Order
-생성된 order에 대하여 order를 요청받은 fulfill(이행자)가 생성된 order를 fulfill하여 거래를 이행합니다.
-```
-const fulfillhandler = async () => {
-    // current Order가 아니라 DB에서 가져와야한다
-    if (seaport != null & currentOrder != null) {
-        const { executeAllActions: executeAllFulfillActions } = await seaport.fulfillOrder({
-            order: currentOrder,
-            accountAddress: data.address,
-            // conduitKey: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000"
+// fulfillments 생성
+const getPrivateListingFulfillments = (
+    privateListingOrder
+) => {
+    const nftRelatedFulfillments = [];
+  
+    // For the original order, we need to match everything offered with every consideration item
+    // on the original order that's set to go to the private listing recipient
+    privateListingOrder.parameters.offer.forEach((offerItem, offerIndex) => {
+        const considerationIndex = privateListingOrder.parameters.consideration.findIndex(
+            (considerationItem) =>
+                considerationItem.itemType === offerItem.itemType &&
+                considerationItem.token === offerItem.token &&
+                considerationItem.identifierOrCriteria === offerItem.identifierOrCriteria
+        );
+        if (considerationIndex === -1) {
+            throw new Error(
+                "Could not find matching offer item in the consideration for private listing"
+            );
+        }
+        nftRelatedFulfillments.push({
+            offerComponents: [{
+                orderIndex: 0,
+                itemIndex: offerIndex,
+            }],
+            considerationComponents: [{
+                orderIndex: 0,
+                itemIndex: considerationIndex,
+            }],
         });
-
-        const transaction = await executeAllFulfillActions();
-        console.log("offer order : ", transaction);
-
-        setorder(null);
-    } else {
-        alert("install metamask extension!!");
-    }
+    });
+  
+    const currencyRelatedFulfillments = [];
+  
+    // For the original order, we need to match everything offered with every consideration item
+    // on the original order that's set to go to the private listing recipient
+    privateListingOrder.parameters.consideration.forEach(
+        (considerationItem, considerationIndex) => {
+            if (!isCurrencyItem(considerationItem)) {
+                return;
+            }
+            // We always match the offer item (index 0) of the counter order (index 1)
+            // with all of the payment items on the private listing
+            currencyRelatedFulfillments.push({
+                offerComponents: [{
+                        orderIndex: 1,
+                        itemIndex: 0,
+                }],
+                considerationComponents: [{
+                        orderIndex: 0,
+                        itemIndex: considerationIndex,
+                }],
+            });
+        }
+    );
+  
+    return [...nftRelatedFulfillments, ...currencyRelatedFulfillments];
 };
 ```
 
 ### cancel order
-생성된 order에 대하여 order 생성자 (offerer)가 order를 취소하는 기능입니다.
+```javascript
+const orderCancel = await seaport.cancelOrders([order.parameters], offerer).transact();
+console.log("cancel order : ", orderCancel);
 ```
-const cancelhandler = async () => {
-    // current Order가 아니라 DB에서 가져와야한다
-    if (seaport != null & currentOrder != null) {
-        const orderCancel = await seaport.cancelOrders([currentOrder.parameters]).transact();
-        console.log("cancel order : ", orderCancel);
-        setorder(null);
+
+### createOrder 함수 
+(createOrderERC721ToEther, createOrderERC721ToERC20, createOrderERC20ToERC721)
+3가지 case 처리용 function 
+```javascript
+const createOrder = async (
+    _endTime,             // order 마감시간
+    orderType,            // ERC721ToEther || ERC721ToERC20 || ERC20ToERC721
+    offerItemAddr,        // order offer item type
+    offerItemId,          // order offer item tokenId (ether나 token이면 0)
+    offerItemAmount,      // order offer item amount (erc721 nft이면 1)
+    considerationAddr,    // order consideration item type
+    considerationId,      // order consideration item tokenId (ether나 token이면 0)
+    considerationAmount,  // order consideration item amount (erc721 nft이면 1)
+    recipient             // consideration 수령자
+) => {
+    if(orderType === "ERC721ToEther") {
+        return createOrderERC721ToEther(
+            _endTime,
+            undefined,
+            offerItemAddr, 
+            offerItemId, 
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            considerationAmount,
+            recipient
+        )
+    } else if(orderType === "ERC721ToERC20") {
+        return createOrderERC721ToERC20(
+            _endTime, 
+            undefined, 
+            offerItemAddr,
+            offerItemId, 
+            undefined,
+            undefined, 
+            considerationAddr,
+            undefined,
+            considerationAmount,
+            recipient
+        )
+    } else if(orderType === "ERC20ToERC721") {
+        return createOrderERC20ToERC721(
+            _endTime, 
+            undefined, 
+            offerItemAddr, 
+            undefined,
+            offerItemAmount,
+            undefined, 
+            considerationAddr,
+            considerationId, 
+            undefined,
+            recipient
+        )
     } else {
-        alert("install metamask extension!!");
+        throw new Error("It's an impossible order type");
     }
-};
+}
 ```
