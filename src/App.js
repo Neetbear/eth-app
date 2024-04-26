@@ -14,8 +14,62 @@ function App() {
   });
   const [currentOrder, setorder] = useState(null);
 
+  // const signhandler = async () => {
+  //   if (window.ethereum) {
+  //     const msgParams = JSON.stringify({
+  //       domain: {
+  //         // Defining the chain aka Rinkeby testnet or Ethereum Main Net 
+          
+  //         chainId: 5,
+  //         // Give a user friendly name to the specific contract you are signing for.
+  //         name: 'LAZY_MARKETPLACE',
+  //         // If name isn't enough add verifying contract to make sure you are establishing contracts with the proper entity
+  //         verifyingContract: '0xA6f10FEbd0C478ce8BF5310758aE0DC32e1A2281',
+  //         // Just let's you know the latest version. Definitely make sure the field name is correct.
+  //         version: '0.0.1',
+  //       },
+    
+  //       types: {
+  //         structSalesOrder: [
+  //             {name: "contractAddress", type: "address"},
+  //             {name: "tokenId", type: "uint256"},
+  //             {name: "tokenOwner", type: "address"},
+  //             {name: "price", type: "uint256"},
+  //             {name: "tokenURI", type: "string"},
+  //             {name: "nonce", type: "uint256"},
+  //         ]
+  //       },
+  
+  //       salesOrder: {
+  //           contractAddress: "0xDfd8CA5BC3F16595E5441582054c02f6B94D0fb6",
+  //           tokenId: "0",
+  //           tokenOwner: "0x191a0b6268C7aeaaE8C2e35Ff01199875ef49104",
+  //           price: "100",
+  //           tokenURI: "ipfs://test/",
+  //           nonce: "0",
+  //       }
+  //     });
+    
+  //     // var from = await web3.eth.getAccounts();
+    
+  //     var params = [from[0], msgParams];
+  //     var method = 'eth_signTypedData_v4';
+    
+  //     window.ethereum.sendAsync(
+  //       {
+  //         method,
+  //         params,
+  //         from: from[0],
+  //       }
+  //     );
+  //   } else {
+  //     alert("install metamask extension!!");
+  //   }
+  // };
+
   const btnhandler = async () => {
     if (window.ethereum) {
+      console.log(await window.ethereum.request({method:"eth_requestAccounts"}).then((res) => ethers.utils.getAddress(res[0])));
       window.ethereum
         .request({ method: "eth_requestAccounts" })
         .then((res) => getbalance(res[0]));
@@ -23,6 +77,10 @@ function App() {
       alert("install metamask extension!!");
     }
   };
+
+  //await window.ethereum.request({method:"eth_requestAccounts"}).then((res) => ethers.utils.getAddress(res[0]))
+  //0xBca19cE9bAC04454A485B830cA3ab4E3a4bD9d89
+  //0xAa47c7a2225ca4A4791B3531b4Eaf839EE16826e
 
   const getbalance = (address) => {
     window.ethereum
@@ -32,7 +90,7 @@ function App() {
       })
       .then((balance) => {
         setdata({
-          address: address,
+          address: ethers.utils.getAddress(address),
           Balance: ethers.utils.formatEther(balance)
         });
       });
@@ -164,6 +222,9 @@ function App() {
           <Button onClick={bulkhandler} variant="primary">
             bulk current order
           </Button>
+          {/* <Button onClick={signhandler} variant="primary">
+            v4 sign test
+          </Button> */}
         </Card.Body>
       </Card>
     </div>
